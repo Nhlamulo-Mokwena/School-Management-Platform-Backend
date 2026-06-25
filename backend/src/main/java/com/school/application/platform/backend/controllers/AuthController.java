@@ -10,12 +10,16 @@ import jakarta.validation.constraints.Size;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
+@CrossOrigin
 @RequestMapping("/api/auth")
 public class AuthController {
 
@@ -51,15 +55,19 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest req) {
-        // This line does the actual credential check — it calls loadUserByUsername,
-        // then compares the provided password against the stored BCrypt hash.
-        // If the credentials are wrong it throws an exception and returns 401.
-        authManager.authenticate(
+        // 1. Capture the authentication outcome containing user data/authorities
+        Authentication auth = authManager.authenticate(
                 new UsernamePasswordAuthenticationToken(req.email(), req.password())
         );
 
-        // Credentials passed — generate and return the JWT
-        String token = jwtUtils.generateToken(req.email());
+        // 2. Map granted authorities to a plain list of Strings
+        List<String> roles = auth.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .toList();
+
+        // 3. Pass both email and the roles list to your token generator
+        String token = jwtUtils.generateToken(req.email(), roles);
+
         return ResponseEntity.ok(Map.of("token", token, "type", "Bearer"));
     }
 
