@@ -235,4 +235,21 @@ public class ApplicationService {
                 app.getUpdatedAt()
         );
     }
+
+    // ── TEACHER: Mark application as Under Review with recommendation ──
+    @Transactional
+    public ApplicationResponse markUnderReview(Long id, StatusUpdateRequest request) {
+        Application app = applicationRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Application not found: " + id));
+
+        // Teachers can only move to UNDER_REVIEW — not accept or decline
+        if (request.status() != ApplicationStatus.UNDER_REVIEW) {
+            throw new IllegalArgumentException("Teachers can only set status to UNDER_REVIEW");
+        }
+
+        app.setStatus(ApplicationStatus.UNDER_REVIEW);
+        app.setAdminNotes(request.adminNotes());
+
+        return toResponse(applicationRepository.save(app));
+    }
 }

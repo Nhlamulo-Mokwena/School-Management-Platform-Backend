@@ -40,46 +40,30 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
-
-                // CORS must be configured here at the Security level — not just on
-                // the controller. Spring Security intercepts the browser's preflight
-                // OPTIONS request before it reaches the controller, so @CrossOrigin
-                // alone never gets a chance to add the required headers.
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-
                 .authorizeHttpRequests(auth -> auth
+                        // Auth endpoints — no token needed
                         .requestMatchers("/api/auth/**").permitAll()
+                        // Public news — no token needed, anyone can read
+                        .requestMatchers("/api/news/public/**").permitAll()
+                        // Everything else requires a valid JWT
                         .anyRequest().authenticated()
                 )
-
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
-    // Tells Spring Security which origins, methods, and headers are allowed.
-    // This runs before JWT authentication so preflight OPTIONS requests
-    // are handled correctly without needing a token.
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         var config = new CorsConfiguration();
-
-        // Allow requests from the Vite dev server
         config.setAllowedOrigins(List.of("http://localhost:3000"));
-
-        // Allow all standard HTTP methods including OPTIONS (preflight)
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-
-        // Allow the Authorization header (JWT) and Content-Type (JSON / multipart)
         config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
-
-        // Allow cookies/credentials to be included in cross-origin requests
         config.setAllowCredentials(true);
 
         var source = new UrlBasedCorsConfigurationSource();
-        // Apply this config to every endpoint
         source.registerCorsConfiguration("/**", config);
         return source;
     }

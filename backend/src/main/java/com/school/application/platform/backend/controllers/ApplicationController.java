@@ -3,6 +3,7 @@ package com.school.application.platform.backend.controllers;
 import com.school.application.platform.backend.dto.ApplicationRequest;
 import com.school.application.platform.backend.dto.ApplicationResponse;
 import com.school.application.platform.backend.dto.StatusUpdateRequest;
+import com.school.application.platform.backend.entities.Application;
 import com.school.application.platform.backend.entities.Application.ApplicationStatus;
 import com.school.application.platform.backend.service.ApplicationService;
 import jakarta.validation.Valid;
@@ -111,5 +112,43 @@ public class ApplicationController {
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, String>> handleIllegalArg(IllegalArgumentException ex) {
         return ResponseEntity.badRequest().body(Map.of("message", ex.getMessage()));
+    }
+
+    // Add this method inside ApplicationController.java
+// alongside the existing parent and admin endpoints.
+
+    // GET /api/applications/teacher
+// Returns all applications — teacher can see everything but cannot approve/decline.
+// In a future version this can be filtered to only show applications
+// for the teacher's assigned school.
+    @GetMapping("/teacher")
+    @PreAuthorize("hasRole('TEACHER')")
+    public ResponseEntity<List<ApplicationResponse>> getApplicationsForTeacher() {
+        return ResponseEntity.ok(applicationService.getAllApplications());
+    }
+
+    // PATCH /api/applications/teacher/{id}/review
+// Teacher marks an application as UNDER_REVIEW and adds a recommendation note.
+// This signals to the admin that the teacher has looked at it.
+//    @PatchMapping("/teacher/{id}/review")
+//    @PreAuthorize("hasRole('TEACHER')")
+//    public ResponseEntity<ApplicationResponse> markUnderReview(
+//            @PathVariable Long id,
+//            @RequestBody @Valid StatusUpdateRequest request
+//    ) {
+//        // Only UNDER_REVIEW is valid from a teacher — they cannot ACCEPT or DECLINE
+//        if (request.status() != Application.ApplicationStatus.UNDER_REVIEW) {
+//            throw new IllegalArgumentException("Teachers can only set status to UNDER_REVIEW");
+//        }
+//        return ResponseEntity.ok(applicationService.updateStatus(id, request));
+//    }
+
+    @PatchMapping("/teacher/{id}/review")
+    @PreAuthorize("hasRole('TEACHER')")
+    public ResponseEntity<ApplicationResponse> markUnderReview(
+            @PathVariable Long id,
+            @RequestBody @Valid StatusUpdateRequest request
+    ) {
+        return ResponseEntity.ok(applicationService.markUnderReview(id, request));
     }
 }
